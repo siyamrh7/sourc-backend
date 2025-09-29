@@ -10,11 +10,9 @@ const login = asyncHandler(async (req, res, next) => {
 
   // Find admin by email and include password
   const admin = await Admin.findByEmail(email);
-
   if (!admin) {
     return next(new ErrorResponse('Invalid credentials', 401));
   }
-
   // Check if account is locked
   if (admin.isLocked) {
     return next(new ErrorResponse('Account is temporarily locked due to too many failed login attempts', 423));

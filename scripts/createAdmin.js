@@ -6,7 +6,7 @@ const createFirstAdmin = async () => {
   try {
     // Connect to MongoDB
     await mongoose.connect(
-      process.env.MONGODB_URI || 'mongodb+srv://sourc:sourc@sourc.pfjjjjd.mongodb.net/?retryWrites=true&w=majority&appName=sourc',
+      process.env.MONGODB_URI || 'mongodb+srv://sourcadmin:siyam@cluster0.3edqqa8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
       {
         useNewUrlParser: true,
         useUnifiedTopology: true,
