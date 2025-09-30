@@ -24,13 +24,50 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
+    // Exact-origin allowlist (including optional comma-separated env var)
+    const envOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
     const allowedOrigins = [
       'http://localhost:3000',
       'http://127.0.0.1:3000',
       'http://localhost:3001',
-      process.env.CLIENT_URL
+      'https://admin.sourc.nl',
+      process.env.CLIENT_URL,
+      ...envOrigins
     ].filter(Boolean);
-    if (allowedOrigins.includes(origin)) {
+
+    // Domain allowlist supports subdomains (e.g., any *.sourc.nl)
+    const envDomains = (process.env.CORS_ALLOWED_DOMAINS || '')
+      .split(',')
+      .map((d) => d.trim())
+      .filter(Boolean);
+    const allowedDomains = [
+      'sourc.nl',
+      ...envDomains
+    ];
+
+    let isAllowed = false;
+    try {
+      const url = new URL(origin);
+      const hostname = url.hostname;
+      // Exact origin match
+      if (allowedOrigins.includes(origin)) {
+        isAllowed = true;
+      }
+      // Domain/subdomain match
+      if (!isAllowed && allowedDomains.length > 0) {
+        isAllowed = allowedDomains.some((domain) => {
+          return hostname === domain || hostname.endsWith(`.${domain}`);
+        });
+      }
+    } catch (e) {
+      // If origin isn't a valid URL, fall back to exact check only
+      isAllowed = allowedOrigins.includes(origin);
+    }
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
