@@ -7,6 +7,7 @@ const {
   advanceOrderPhase,
   updateOrderPhase,
   deleteOrder,
+  hardDeleteOrder,
   getOrderStats,
   searchOrders
 } = require('../controllers/orderController');
@@ -57,6 +58,15 @@ router
     logAdminAction('DELETE_ORDER'),
     deleteOrder
   );
+
+// Hard delete permanently
+router.delete(
+  '/:orderId/hard',
+  checkPermission('canDeleteOrders'),
+  validateOrderId,
+  logAdminAction('HARD_DELETE_ORDER'),
+  hardDeleteOrder
+);
 
 // Order phase management
 router.patch(

@@ -18,6 +18,17 @@ const findOrderByIdOrOrderId = async (identifier) => {
   return order;
 };
 
+// Helper to find order regardless of isActive (for hard delete)
+const findAnyOrderByIdOrOrderId = async (identifier) => {
+  let order;
+  if (/^[0-9a-fA-F]{24}$/.test(identifier)) {
+    order = await Order.findOne({ _id: identifier });
+  } else {
+    order = await Order.findOne({ orderId: identifier });
+  }
+  return order;
+};
+
 // @desc    Get all orders
 // @route   GET /api/orders
 // @access  Private (Admin)
@@ -325,44 +336,103 @@ const updateOrder = asyncHandler(async (req, res, next) => {
     req.body.customer.customerId = customer._id;
   }
 
-  // Handle timeline updates with proper structure
+  // Handle timeline updates with proper structure and enforce 7 steps
   if (req.body.timeline && Array.isArray(req.body.timeline)) {
-    // Ensure each timeline step has required fields
-    req.body.timeline = req.body.timeline.map((step, index) => ({
+    // Base 7-step template
+    const defaultTimeline = [
+      { id: 1, title: 'Offer Accepted', description: 'Customer has approved the offer; order has been initiated.', estimatedDuration: '1 day' },
+      { id: 2, title: 'Mold / Product in Development', description: 'Product or mold is being created.', estimatedDuration: '14 days' },
+      { id: 3, title: 'Sample Sent to Client', description: 'Customer receives a sample. Approval required.', estimatedDuration: '3 days' },
+      { id: 4, title: 'Sample Approved', description: 'Customer has approved the sample. Mass production begins.', estimatedDuration: '2 days' },
+      { id: 5, title: 'Production Phase', description: 'Final product is being manufactured.', estimatedDuration: '21 days' },
+      { id: 6, title: 'Transport Phase', description: 'Order has shipped. In transit to the destination country.', estimatedDuration: '7 days' },
+      { id: 7, title: 'Delivered to Final Location', description: 'Order has been delivered to the specified location.', estimatedDuration: '1 day' }
+    ];
+
+    // Normalize provided steps, then enforce exactly 7 by aligning to template
+    const normalizedIncoming = req.body.timeline.map((step, index) => ({
       id: step.id || (index + 1),
-      title: step.title || `Step ${index + 1}`,
-      description: step.description || '',
-      estimatedDuration: step.estimatedDuration || '',
+      title: step.title || defaultTimeline[index]?.title || `Step ${index + 1}`,
+      description: step.description || defaultTimeline[index]?.description || '',
+      estimatedDuration: step.estimatedDuration || defaultTimeline[index]?.estimatedDuration || '',
       startDate: step.startDate || '',
       finishDate: step.finishDate || '',
       status: step.status || (step.isCompleted ? 'Completed' : step.isInProgress ? 'In Progress' : 'Locked'),
       isCompleted: step.isCompleted || false,
       isInProgress: step.isInProgress || false,
-      isLocked: step.isLocked !== false // Default to locked unless explicitly set to false
+      isLocked: step.isLocked !== false
     }));
 
-    // Update progress based on completed timeline steps
-    const completedSteps = req.body.timeline.filter(step => step.isCompleted).length;
-    const inProgressSteps = req.body.timeline.filter(step => step.isInProgress).length;
-    
+    // Build the 7-step timeline either from provided or defaults
+    const enforcedTimeline = defaultTimeline.map((tpl, idx) => {
+      const provided = normalizedIncoming[idx];
+      if (provided) {
+        // Merge provided onto template, keeping required fields
+        return {
+          id: tpl.id,
+          title: provided.title || tpl.title,
+          description: provided.description || tpl.description,
+          estimatedDuration: provided.estimatedDuration || tpl.estimatedDuration,
+          startDate: provided.startDate || '',
+          finishDate: provided.finishDate || '',
+          status: provided.status,
+          isCompleted: provided.isCompleted,
+          isInProgress: provided.isInProgress,
+          isLocked: provided.isLocked
+        };
+      }
+      // If missing, lock remaining steps by default
+      return {
+        id: tpl.id,
+        title: tpl.title,
+        description: tpl.description,
+        estimatedDuration: tpl.estimatedDuration,
+        startDate: '',
+        finishDate: '',
+        status: 'Locked',
+        isCompleted: false,
+        isInProgress: false,
+        isLocked: true
+      };
+    });
+
+    // Update progress based on completed and in-progress steps, clamp 1..7
+    const completedSteps = enforcedTimeline.filter(step => step.isCompleted).length;
+    const inProgressSteps = enforcedTimeline.filter(step => step.isInProgress).length;
+
     if (!req.body.progress) {
       req.body.progress = {};
     }
-    
-    req.body.progress.current = completedSteps + (inProgressSteps > 0 ? 1 : 0);
-    req.body.progress.total = req.body.timeline.length;
 
-    // Set current phase
-    if (inProgressSteps > 0) {
-      const inProgressStep = req.body.timeline.find(step => step.isInProgress);
-      if (inProgressStep) {
-        req.body.currentPhase = inProgressStep.title;
+    const computedCurrent = completedSteps + (inProgressSteps > 0 ? 1 : 0);
+    req.body.progress.current = Math.min(Math.max(computedCurrent, 1), 7);
+    req.body.progress.total = 7;
+
+    // Ensure only one step is In Progress (the current one)
+    const currentIndex = req.body.progress.current - 1;
+    enforcedTimeline.forEach((item, index) => {
+      if (index < currentIndex) {
+        item.status = 'Completed';
+        item.isCompleted = true;
+        item.isInProgress = false;
+        item.isLocked = false;
+      } else if (index === currentIndex) {
+        item.status = 'In Progress';
+        item.isCompleted = false;
+        item.isInProgress = true;
+        item.isLocked = false;
+      } else {
+        item.status = 'Locked';
+        item.isCompleted = false;
+        item.isInProgress = false;
+        item.isLocked = true;
       }
-    } else if (completedSteps < req.body.timeline.length) {
-      req.body.currentPhase = req.body.timeline[completedSteps].title;
-    } else {
-      req.body.currentPhase = req.body.timeline[req.body.timeline.length - 1].title;
-    }
+    });
+
+    req.body.timeline = enforcedTimeline;
+
+    // Set current phase label
+    req.body.currentPhase = enforcedTimeline[currentIndex]?.title || 'Offer Accepted';
   }
 
   // Update progress-based status if not explicitly provided
@@ -543,6 +613,27 @@ const deleteOrder = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Delete order permanently (hard delete)
+// @route   DELETE /api/orders/:orderId/hard
+// @access  Private (Admin with canDeleteOrders permission)
+const hardDeleteOrder = asyncHandler(async (req, res, next) => {
+  const order = await findAnyOrderByIdOrOrderId(req.params.orderId);
+
+  if (!order) {
+    return next(new ErrorResponse(`Order ${req.params.orderId} not found`, 404));
+  }
+
+  await Order.deleteOne({ _id: order._id });
+
+  // Update admin activity
+  await req.admin.updateActivity({ ordersModified: true });
+
+  res.status(200).json({
+    success: true,
+    message: `Order ${order.orderId} permanently deleted`
+  });
+});
+
 // @desc    Get order statistics
 // @route   GET /api/orders/stats
 // @access  Private (Admin)
@@ -660,6 +751,7 @@ module.exports = {
   advanceOrderPhase,
   updateOrderPhase,
   deleteOrder,
+  hardDeleteOrder,
   getOrderStats,
   searchOrders
 }; 
