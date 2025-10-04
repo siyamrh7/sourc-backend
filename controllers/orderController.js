@@ -58,7 +58,7 @@ const getOrders = asyncHandler(async (req, res, next) => {
       { orderId: { $regex: search, $options: 'i' } },
       { 'customer.name': { $regex: search, $options: 'i' } },
       { 'customer.email': { $regex: search, $options: 'i' } },
-      { 'product.name': { $regex: search, $options: 'i' } }
+      { 'products.name': { $regex: search, $options: 'i' } }
     ];
   }
 
@@ -288,6 +288,14 @@ const createOrder = asyncHandler(async (req, res, next) => {
     if (req.body.timeline[currentStepIndex]) {
       req.body.currentPhase = req.body.timeline[currentStepIndex].title;
     }
+  }
+
+  // Calculate total value from products if not provided
+  if (!req.body.totalValue && req.body.products && req.body.products.length > 0) {
+    req.body.totalValue = req.body.products.reduce((total, product) => {
+      const value = parseFloat(product.value) || 0;
+      return total + value;
+    }, 0);
   }
 
   // Create order
@@ -650,7 +658,7 @@ const getOrderStats = asyncHandler(async (req, res, next) => {
           $sum: { 
             $toDouble: { 
               $replaceAll: { 
-                input: { $replaceAll: { input: '$product.value', find: '€', replacement: '' } },
+                input: { $replaceAll: { input: '$totalValue', find: '€', replacement: '' } },
                 find: ',',
                 replacement: ''
               }
@@ -674,7 +682,7 @@ const getOrderStats = asyncHandler(async (req, res, next) => {
           $sum: { 
             $toDouble: { 
               $replaceAll: { 
-                input: { $replaceAll: { input: '$product.value', find: '€', replacement: '' } },
+                input: { $replaceAll: { input: '$totalValue', find: '€', replacement: '' } },
                 find: ',',
                 replacement: ''
               }
@@ -685,7 +693,7 @@ const getOrderStats = asyncHandler(async (req, res, next) => {
           $avg: { 
             $toDouble: { 
               $replaceAll: { 
-                input: { $replaceAll: { input: '$product.value', find: '€', replacement: '' } },
+                input: { $replaceAll: { input: '$totalValue', find: '€', replacement: '' } },
                 find: ',',
                 replacement: ''
               }
@@ -700,7 +708,7 @@ const getOrderStats = asyncHandler(async (req, res, next) => {
   const recentOrders = await Order.find({ isActive: true })
     .sort({ createdAt: -1 })
     .limit(5)
-    .select('orderId customer.name product.name status createdAt');
+    .select('orderId customer.name products.name status createdAt');
 
   res.status(200).json({
     success: true,
@@ -728,7 +736,7 @@ const searchOrders = asyncHandler(async (req, res, next) => {
       { orderId: { $regex: q, $options: 'i' } },
       { 'customer.name': { $regex: q, $options: 'i' } },
       { 'customer.email': { $regex: q, $options: 'i' } },
-      { 'product.name': { $regex: q, $options: 'i' } },
+      { 'products.name': { $regex: q, $options: 'i' } },
       { 'shipping.destination': { $regex: q, $options: 'i' } }
     ]
   })

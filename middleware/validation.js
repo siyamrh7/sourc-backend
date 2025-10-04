@@ -32,24 +32,29 @@ const validateCreateOrder = [
     .isMobilePhone()
     .withMessage('Please provide a valid phone number'),
     
-  body('product.name')
+  // Products array validation
+  body('products')
+    .isArray({ min: 1 })
+    .withMessage('At least one product is required'),
+
+  body('products.*.name')
     .notEmpty()
     .withMessage('Product name is required')
     .trim()
     .isLength({ min: 2, max: 200 })
     .withMessage('Product name must be between 2 and 200 characters'),
 
-  body('product.description')
+  body('products.*.description')
     .optional()
     .trim()
     .isLength({ max: 1000 })
     .withMessage('Product description cannot exceed 1000 characters'),
     
-  body('product.quantity')
+  body('products.*.quantity')
     .notEmpty()
     .withMessage('Product quantity is required'),
     
-  body('product.value')
+  body('products.*.value')
     .notEmpty()
     .withMessage('Order value is required'),
     
@@ -144,23 +149,29 @@ const validateUpdateOrder = [
     .isMobilePhone()
     .withMessage('Please provide a valid phone number'),
     
-  body('product.name')
+  // Products array validation for update (all optional but validated if present)
+  body('products')
+    .optional()
+    .isArray()
+    .withMessage('Products must be an array'),
+
+  body('products.*.name')
     .optional()
     .trim()
     .isLength({ min: 2, max: 200 })
     .withMessage('Product name must be between 2 and 200 characters'),
 
-  body('product.description')
+  body('products.*.description')
     .optional()
     .trim()
     .isLength({ max: 1000 })
     .withMessage('Product description cannot exceed 1000 characters'),
 
-  body('product.quantity')
+  body('products.*.quantity')
     .optional()
     .trim(),
 
-  body('product.value')
+  body('products.*.value')
     .optional()
     .trim(),
     

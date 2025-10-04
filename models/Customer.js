@@ -225,10 +225,17 @@ customerSchema.methods.updateStatistics = async function() {
     this.totalOrders = orders.length;
     
     if (orders.length > 0) {
-      // Calculate total spent
+      // Calculate total spent using totalValue if present, otherwise sum products
       this.totalSpent = orders.reduce((total, order) => {
-        const value = parseFloat(order.product.value.replace(/[^0-9.-]+/g, '')) || 0;
-        return total + value;
+        if (typeof order.totalValue === 'number') {
+          return total + order.totalValue;
+        }
+        if (Array.isArray(order.products)) {
+          const sum = order.products.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+          return total + sum;
+        }
+        const legacy = order.product?.value ? parseFloat(String(order.product.value).replace(/[^0-9.-]+/g, '')) || 0 : 0;
+        return total + legacy;
       }, 0);
       
       // Calculate average order value

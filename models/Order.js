@@ -80,11 +80,17 @@ const orderSchema = new mongoose.Schema({
     }
   },
 
-  // Product Information
-  product: {
+  // Products Information (now supports multiple products)
+  products: [{
+    id: {
+      type: Number,
+      required: true
+    },
     name: {
       type: String,
       required: [true, 'Product name is required'],
+      minlength: [2, 'Product name must be between 2 and 200 characters'],
+      maxlength: [200, 'Product name must be between 2 and 200 characters'],
       trim: true
     },
     quantity: {
@@ -99,6 +105,12 @@ const orderSchema = new mongoose.Schema({
       type: String,
       trim: true
     }
+  }],
+
+  // Total order value (calculated from all products)
+  totalValue: {
+    type: Number,
+    default: 0
   },
 
   // Shipping Information
