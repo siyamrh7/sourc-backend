@@ -315,6 +315,39 @@ const resetPassword = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Change password by email (public; verifies current password)
+// @route   POST /api/customer-auth/change-password-by-email
+// @access  Public
+const changePasswordByEmail = asyncHandler(async (req, res, next) => {
+  const { email, currentPassword, newPassword } = req.body;
+
+  if (!email || !currentPassword || !newPassword) {
+    return next(new ErrorResponse('Email, current password and new password are required', 400));
+  }
+
+  // Find customer by email and include password
+  const customer = await Customer.findByEmail(email).select('+password');
+
+  if (!customer) {
+    return next(new ErrorResponse('Invalid credentials', 401));
+  }
+
+  // Verify current password
+  const isMatch = await customer.matchPassword(currentPassword);
+  if (!isMatch) {
+    return next(new ErrorResponse('Invalid credentials', 401));
+  }
+
+  // Update to new password
+  customer.password = newPassword;
+  await customer.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Password updated successfully'
+  });
+});
+
 module.exports = {
   login,
   getMe,
@@ -324,5 +357,6 @@ module.exports = {
   getMyOrder,
   logout,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  changePasswordByEmail
 }; 

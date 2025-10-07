@@ -8,10 +8,11 @@ const {
   getMyOrder,
   logout,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  changePasswordByEmail
 } = require('../controllers/customerAuthController');
 const { protectCustomer } = require('../middleware/customerAuth');
-const { validateCustomerLogin, validateCustomerProfileUpdate, validatePasswordChange, validateForgotPassword, validateResetPassword } = require('../middleware/validation');
+const { validateCustomerLogin, validateCustomerProfileUpdate, validatePasswordChange, validateForgotPassword, validateResetPassword, validatePasswordChangeByEmail } = require('../middleware/validation');
 
 const router = express.Router();
 
@@ -59,5 +60,10 @@ router.post('/forgot-password', validateForgotPassword, forgotPassword);
 // @desc    Reset password with token
 // @access  Public
 router.put('/reset-password/:resettoken', validateResetPassword, resetPassword);
+
+// @route   POST /api/customer-auth/change-password-by-email
+// @desc    Change password by email
+// @access  Public
+router.post('/change-password-by-email', validatePasswordChangeByEmail, changePasswordByEmail);
 
 module.exports = router; 

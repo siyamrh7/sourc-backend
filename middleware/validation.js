@@ -515,6 +515,23 @@ const validatePasswordChange = [
   handleValidationErrors
 ];
 
+// Public password change by email validation
+const validatePasswordChangeByEmail = [
+  body('email')
+    .isEmail()
+    .withMessage('Please provide a valid email address')
+    .normalizeEmail(),
+
+  body('currentPassword')
+    .notEmpty()
+    .withMessage('Current password is required'),
+
+  body('newPassword')
+    .isLength({ min: 8, max: 128 })
+    .withMessage('New password must be between 8 and 128 characters long'),
+  handleValidationErrors
+];
+
 // Rename existing admin login validation
 const validateLoginAdmin = validateLogin;
 
@@ -555,6 +572,7 @@ module.exports = {
   validateCustomerLogin,
   validateCustomerProfileUpdate,
   validatePasswordChange,
+  validatePasswordChangeByEmail,
   validateObjectId,
   validateOrderId,
   validatePagination,
