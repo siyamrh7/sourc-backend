@@ -31,6 +31,11 @@ const customerSchema = new mongoose.Schema({
     ]
   },
   
+  fullAddress: {
+    type: String,
+    trim: true
+  },
+  
   password: {
     type: String,
     minlength: [6, 'Password must be at least 6 characters'],
@@ -58,6 +63,10 @@ const customerSchema = new mongoose.Schema({
       trim: true
     },
     industry: {
+      type: String,
+      trim: true
+    },
+    kvk: {
       type: String,
       trim: true
     }
@@ -143,15 +152,6 @@ const customerSchema = new mongoose.Schema({
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
-});
-
-// Virtual for full address
-customerSchema.virtual('fullAddress').get(function() {
-  if (!this.company.address) return '';
-  
-  const { street, city, state, zipCode, country } = this.company.address;
-  const addressParts = [street, city, state, zipCode, country].filter(Boolean);
-  return addressParts.join(', ');
 });
 
 // Virtual for display name (company name or personal name)

@@ -154,14 +154,33 @@ const createOrder = asyncHandler(async (req, res, next) => {
       name: req.body.customer.name,
       email: req.body.customer.email,
       phone: req.body.customer.phone,
+      fullAddress: req.body.customer.fullAddress,
       company: req.body.customer.company || {
         name: req.body.customer.name
       }
     });
+  } else {
+    // Update existing customer with new data if provided
+    const updateData = {};
+    if (req.body.customer.fullAddress) updateData.fullAddress = req.body.customer.fullAddress;
+    if (req.body.customer.phone) updateData.phone = req.body.customer.phone;
+    if (req.body.customer.company) updateData.company = req.body.customer.company;
+    
+    if (Object.keys(updateData).length > 0) {
+      await Customer.findByIdAndUpdate(customer._id, updateData);
+    }
   }
 
-  // Add customer reference
+  // Add customer reference and ensure all customer data is stored in order
   req.body.customer.customerId = customer._id;
+  
+  // Ensure complete customer data is stored in the order
+  if (!req.body.customer.fullAddress && customer.fullAddress) {
+    req.body.customer.fullAddress = customer.fullAddress;
+  }
+  if (!req.body.customer.company && customer.company) {
+    req.body.customer.company = customer.company;
+  }
 
   // Set default timeline if not provided
   if (!req.body.timeline || req.body.timeline.length === 0) {

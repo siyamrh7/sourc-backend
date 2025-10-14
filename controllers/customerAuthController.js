@@ -30,6 +30,7 @@ const sendTokenResponse = (customer, statusCode, res) => {
         email: customer.email,
         company: customer.company,
         phone: customer.phone,
+        fullAddress: customer.fullAddress,
         customerType: customer.customerType,
         accountStatus: customer.accountStatus
       }
@@ -98,6 +99,7 @@ const updateProfile = asyncHandler(async (req, res, next) => {
   const fieldsToUpdate = {
     name: req.body.name,
     phone: req.body.phone,
+    fullAddress: req.body.fullAddress,
     'address.street': req.body.address?.street,
     'address.city': req.body.address?.city,
     'address.state': req.body.address?.state,
@@ -105,7 +107,8 @@ const updateProfile = asyncHandler(async (req, res, next) => {
     'address.country': req.body.address?.country,
     'company.name': req.body.company?.name,
     'company.taxId': req.body.company?.taxId,
-    'company.website': req.body.company?.website
+    'company.website': req.body.company?.website,
+    'company.kvk': req.body.company?.kvk
   };
 
   // Remove undefined fields

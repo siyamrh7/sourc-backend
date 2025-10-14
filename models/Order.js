@@ -74,6 +74,26 @@ const orderSchema = new mongoose.Schema({
       type: String,
       trim: true
     },
+    fullAddress: {
+      type: String,
+      trim: true
+    },
+    company: {
+      name: {
+        type: String,
+        trim: true
+      },
+      kvk: {
+        type: String,
+        trim: true
+      },
+      address: {
+        street: String,
+        city: String,
+        postalCode: String,
+        country: String
+      }
+    },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Customer'
